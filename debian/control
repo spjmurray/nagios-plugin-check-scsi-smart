@@ -1,0 +1,15 @@
+Source: nagios-plugin-check-scsi-smart
+Maintainer: Simon Murray <spjmurray@yahoo.co.uk>
+Section: misc
+Priority: optional
+Standards-Version: 3.9.6
+Build-Depends: debhelper (>=9)
+
+Package: nagios-plugin-check-scsi-smart
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Nagios SMART disk check over SCSI
+ Tunnels ATA SMART commands over SCSI transports.  This allows ATA SMART checks
+ to work for SATA drives which are directly attached to a SATA controller a SAS
+ HBA or a SAS expander.  The SAT translation layer handles decpasulating the
+ ATA command at the relvant boundary between SCSI and SATA protocols.
