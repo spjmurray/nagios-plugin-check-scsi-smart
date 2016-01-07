@@ -511,16 +511,28 @@ int main(int argc, char** argv) {
   smart_data sd;
   ata_smart_read_data(fd, (unsigned char*)&sd);
 
-  if((sd.offline_data_collection_status & 0x7f) == SMART_OFF_LINE_STATUS_NEVER_STARTED) {
-    printf("Off-line data collection: never started\n\n");
-  } else if((sd.offline_data_collection_status & 0x7f) == SMART_OFF_LINE_STATUS_SUSPENDED) {
-    printf("Off-line data collection: suspended\n\n");
-  } else if((sd.offline_data_collection_status & 0x7f) == SMART_OFF_LINE_STATUS_ABORTED_HOST) {
-    printf("Off-line data collection: aborted by host\n\n");
-  } else if((sd.offline_data_collection_status & 0x7f) == SMART_OFF_LINE_STATUS_ABORTED_DEVICE) {
-    printf("Off-line data collection: aborted by device\n\n");
-  } else {
-    printf("Off-line data collection: unknown state\n\n");
+  switch(sd.offline_data_collection_status & 0x7f) {
+    case SMART_OFF_LINE_STATUS_NEVER_STARTED:
+      printf("Off-line data collection: never started\n\n");
+      break;
+    case SMART_OFF_LINE_STATUS_COMPLETED:
+      printf("Off-line data collection: completed\n\n");
+      break;
+    case SMART_OFF_LINE_STATUS_IN_PROGRESS:
+      printf("Off-line data collection: in progress\n\n");
+      break;
+    case SMART_OFF_LINE_STATUS_SUSPENDED:
+      printf("Off-line data collection: suspended\n\n");
+      break;
+    case SMART_OFF_LINE_STATUS_ABORTED_HOST:
+      printf("Off-line data collection: aborted by host\n\n");
+      break;
+    case SMART_OFF_LINE_STATUS_ABORTED_DEVICE:
+      printf("Off-line data collection: aborted by device\n\n");
+      break;
+    default:
+      printf("Off-line data collection: unknown state\n\n");
+      break;
   }
 
   /* Perform actual SMART threshold checks */
