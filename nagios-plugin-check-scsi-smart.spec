@@ -1,5 +1,5 @@
 Name: nagios-plugin-check-scsi-smart
-Version: 1.0.1
+Version: 1.0.2
 Release: 1
 License: GPLv3
 Summary: Nagios plugin to perform SMART checks on SATA devices on SCSI buses
