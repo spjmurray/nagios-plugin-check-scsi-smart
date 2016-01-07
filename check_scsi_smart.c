@@ -512,21 +512,18 @@ int main(int argc, char** argv) {
   ata_smart_read_data(fd, (unsigned char*)&sd);
 
   if((sd.offline_data_collection_status & 0x7f) == SMART_OFF_LINE_STATUS_NEVER_STARTED) {
-    printf("UNKNOWN: Off-line data collection never started\n");
-    exit(NAGIOS_UNKNOWN);
+    printf("Off-line data collection: never started\n");
   }
 
   if((sd.offline_data_collection_status & 0x7f) == SMART_OFF_LINE_STATUS_SUSPENDED ||
      (sd.offline_data_collection_status & 0x7f) == SMART_OFF_LINE_STATUS_ABORTED_HOST ||
      (sd.offline_data_collection_status & 0x7f) == SMART_OFF_LINE_STATUS_ABORTED_DEVICE) {
-    printf("WARNING: Off-line data collection suspended/aborted\n");
-    exit(NAGIOS_WARNING);
+    printf("Off-line data collection: suspended/aborted\n");
   }
 
   if((sd.offline_data_collection_status & 0x7f) != SMART_OFF_LINE_STATUS_COMPLETED &&
      (sd.offline_data_collection_status & 0x7f) != SMART_OFF_LINE_STATUS_IN_PROGRESS) {
-    printf("UNKNOWN: Off-line data collection in unknown state\n");
-    exit(NAGIOS_UNKNOWN);
+    printf("Off-line data collection: unknown state\n");
   }
 
   /* Perform actual SMART threshold checks */
@@ -535,7 +532,7 @@ int main(int argc, char** argv) {
   smart_thresholds st;
   ata_smart_read_thresholds(fd, (unsigned char*)&st);
 
-  printf("ID   Name                               Value  Worst  Thresh  Type       Updated   Raw          Status\n");
+  printf("ID   Name                                          Value  Worst  Thresh  Type       Updated   Raw          Status\n");
 
   int i=0;
   for(; i<SMART_ATTRIBUTE_NUM; i++) {
@@ -558,7 +555,7 @@ int main(int argc, char** argv) {
       }
     }
 
-    printf("%3d  %-32s   %03d    %03d    %03d     %-8s   %-7s   %-11d  %s\n",
+    printf("%3d  %-44s  %03d    %03d    %03d     %-8s   %-7s   %-11d  %s\n",
       sd.attributes[i].id,
       smart_id_to_text(sd.attributes[i].id),
       sd.attributes[i].value,
