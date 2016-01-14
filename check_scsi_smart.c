@@ -120,8 +120,9 @@ typedef struct __attribute__((packed)) {
   uint16_t flags;
   uint8_t  value;
   uint8_t  worst;
-  uint32_t raw;
-  uint8_t  pad[3];
+  uint32_t raw_lo;
+  uint16_t raw_hi;
+  uint8_t  pad;
 } smart_attribute;
 
 /*
@@ -541,7 +542,7 @@ int main(int argc, char** argv) {
   smart_thresholds st;
   ata_smart_read_thresholds(fd, (unsigned char*)&st);
 
-  printf("ID   Name                                          Value  Worst  Thresh  Type       Updated   Raw          Status\n");
+  printf("ID   Name                                          Value  Worst  Thresh  Type       Updated   Raw            Status\n");
 
   int i=0;
   for(; i<SMART_ATTRIBUTE_NUM; i++) {
@@ -564,7 +565,7 @@ int main(int argc, char** argv) {
       }
     }
 
-    printf("%3d  %-44s  %03d    %03d    %03d     %-8s   %-7s   %-11d  %s\n",
+    printf("%3d  %-44s  %03d    %03d    %03d     %-8s   %-7s   %-13ld  %s\n",
       sd.attributes[i].id,
       smart_id_to_text(sd.attributes[i].id),
       sd.attributes[i].value,
@@ -572,7 +573,7 @@ int main(int argc, char** argv) {
       st.thresholds[i].threshold,
       (sd.attributes[i].flags & 0x1) ? "Pre-fail" : "Advisory",
       (sd.attributes[i].flags & 0x2) ? "Always" : "Offline",
-      sd.attributes[i].raw,
+      (uint64_t)sd.attributes[i].raw_lo | (uint64_t)sd.attributes[i].raw_hi << 32,
       status);
   }
 
