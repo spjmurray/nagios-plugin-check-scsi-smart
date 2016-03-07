@@ -1,7 +1,7 @@
-CC=gcc
+CC=g++
 CFLAGS=-O2 -Wall
 EXE=check_scsi_smart
-SOURCE=check_scsi_smart.c
+SOURCE=check_scsi_smart.cc
 PREFIX=/usr
 LIBDIR=lib
 
