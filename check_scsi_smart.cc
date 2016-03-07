@@ -45,7 +45,7 @@
 using namespace std;
 
 #define BINARY "check_scsi_smart"
-#define VERSION "1.0.0"
+#define VERSION "1.1.0"
 
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
