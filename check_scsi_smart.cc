@@ -38,220 +38,26 @@
 #include <sys/ioctl.h>
 #include <scsi/sg.h>
 
+#include "scsi.h"
+#include "ata.h"
+#include "smart.h"
+
 #include <iostream>
 #include <memory>
 #include <sstream>
 
 using namespace std;
 
-#define BINARY "check_scsi_smart"
-#define VERSION "1.1.0"
-
-#define MAX(a,b) ((a)>(b)?(a):(b))
+const char* const BINARY  = "check_scsi_smart";
+const char* const VERSION = "1.1.0";
 
 /* Nagios return codes */
-#define NAGIOS_OK       0
-#define NAGIOS_WARNING  1
-#define NAGIOS_CRITICAL 2
-#define NAGIOS_UNKNOWN  3
+const int NAGIOS_OK       = 0;
+const int NAGIOS_WARNING  = 1;
+const int NAGIOS_CRITICAL = 2;
+const int NAGIOS_UNKNOWN  = 3;
 
-/* SCSI primary commands */
-#define SBC_ATA_PASS_THROUGH 0x85
-
-/* ATA commands */
-#define ATA_IDENTIFY_DEVICE 0xec
-#define ATA_SMART           0xb0
-
-/* ATA protocols */
-#define ATA_PROTOCOL_PIO_DATA_IN 0x4
-
-/* ATA Log Addresses */
-#define ATA_LOG_ADDRESS_DIRECTORY 0x0
-#define ATA_LOG_ADDRESS_SMART     0x1
-
-/* SMART functions */
-#define SMART_READ_DATA       0xd0
-#define SMART_READ_THRESHOLDS 0xd1
-#define SMART_READ_LOG        0xd5
-#define SMART_RETURN_STATUS   0xda
-
-/* SMART off-line status */
-#define SMART_OFF_LINE_STATUS_NEVER_STARTED  0x00
-#define SMART_OFF_LINE_STATUS_COMPLETED      0x02
-#define SMART_OFF_LINE_STATUS_IN_PROGRESS    0x03
-#define SMART_OFF_LINE_STATUS_SUSPENDED      0x04
-#define SMART_OFF_LINE_STATUS_ABORTED_HOST   0x05
-#define SMART_OFF_LINE_STATUS_ABORTED_DEVICE 0x06
-
-#define SECTOR_SIZE 512
-#define SMART_ATTRIBUTE_NUM 30
-
-/*
- * Struct: sbc_ata_pass_through
- * ----------------------------
- * SCSI CDB for tunneling ATA commands over the SCSI command protocol
- * to a SAT which then translates to a native ATA command to the actual
- * device.  May be handled by Linux for directly attached devices or
- * via a SAS HBA/expander.
- */
-typedef struct {
-  uint8_t operation_code;
-  uint8_t extend: 1;
-  uint8_t protocol: 4;
-  uint8_t multiple_count: 3;
-  uint8_t t_length: 2;
-  uint8_t byte_block: 1;
-  uint8_t t_dir: 1;
-  uint8_t t_type: 1;
-  uint8_t ck_cond: 1;
-  uint8_t off_line: 2;
-  uint8_t features_15_8;
-  uint8_t features_7_0;
-  uint8_t count_15_8;
-  uint8_t count_7_0;
-  uint8_t lba_31_24;
-  uint8_t lba_7_0;
-  uint8_t lba_39_32;
-  uint8_t lba_15_8;
-  uint8_t lba_47_40;
-  uint8_t lba_23_16;
-  uint8_t device;
-  uint8_t command;
-  uint8_t control;
-} sbc_ata_pass_through;
-
-/*
- * Struct: ata_log_directory
- * -------------------------
- * Structure defining the directory version and number of logs available
- * for each address.  Index 0 is the version, this is kept as an array to
- * enable resue of ATA_LOG_ADDRESS_* macros.
- */
-typedef struct {
-  uint16_t data_blocks[256];
-} ata_log_directory;
-
-/*
- * Struct: smart_attribute
- * -----------------------
- * Vendor specific SMART attribute as returned by a SMART READ DATA ATA
- * command.
- */
-typedef struct __attribute__((packed)) {
-  uint8_t  id;
-  uint16_t flags;
-  uint8_t  value;
-  uint8_t  worst;
-  uint32_t raw_lo;
-  uint16_t raw_hi;
-  uint8_t  pad;
-} smart_attribute;
-
-/*
- * Struct: smart_threshold
- * -----------------------
- * Vendor specific SMART threshold as returned by a SMART READ THRESHOLDS
- * ATA command.  This is now obsolete, and should be rolled up by the device
- * into and LBA field which can be attained via the SMART RETURN STATUS
- * command
- */
-typedef struct __attribute__((packed)) {
-  uint8_t id;
-  uint8_t threshold;
-  uint8_t pad[10];
-} smart_threshold;
-
-/*
- * Struct: smart_data
- * ------------------
- * Standardized ATA SMART data returned by SMART READ DATA
- */
-typedef struct __attribute__((packed)) {
-  uint16_t        version;
-  smart_attribute attributes[SMART_ATTRIBUTE_NUM];
-  uint8_t         offline_data_collection_status;
-  uint8_t         self_test_execution_status;
-  uint16_t        offline_collection_time;
-  uint8_t         vendor_specific1;
-  uint8_t         offline_collection_capability;
-  uint16_t        smart_capability;
-  uint8_t         error_logging_capbility;
-  uint8_t         vendor_specific2;
-  uint8_t         short_self_test_polling_time;
-  uint8_t         extended_self_test_polling_time;
-  uint8_t         conveyance_self_test_polling_time;
-  uint16_t        extended_self_test_routine_polling_time;
-  uint8_t         reserved[9];
-  uint8_t         vendor_specific3[125];
-  uint8_t         checksum;
-} smart_data;
-
-/*
- * Struct: smart_thresholds
- * ------------------------
- * Standardized ATA SMART threshold data returned by SMART READ THRESHOLDS
- */
-typedef struct __attribute__((packed)) {
-  uint16_t        version;
-  smart_threshold thresholds[SMART_ATTRIBUTE_NUM];
-  uint8_t         reserved[149];
-  uint8_t         checksum;
-} smart_thresholds;
-
-/*
- * Struct: smart_log_command
- * -------------------------
- * SMART log command
- */
-typedef struct __attribute__((packed)) {
-  uint8_t command;
-  uint8_t feature;
-  uint32_t lba: 24;
-  uint32_t count: 8;
-  uint8_t device;
-  uint8_t init;
-  uint32_t timestamp;
-} smart_log_command;
-
-/*
- * Struct: smart_log_error
- * -----------------------
- * SMART log error structure defining LBA, device, status, timestamp etc.
- */
-typedef struct __attribute__((packed)) {
-  uint8_t reserved;
-  uint8_t error;
-  uint32_t lba: 24;
-  uint32_t count: 8;
-  uint8_t device;
-  uint8_t status;
-  uint8_t extended[19];
-  uint8_t state;
-  uint16_t timestamp;
-} smart_log_error;
-
-/*
- * Struct: smart_log_data
- * ----------------------
- * Sructure to hold an error and the preceding commands leading up to it
- */
-typedef struct __attribute__((packed)) {
-  smart_log_command command[5];
-  smart_log_error error;
-} smart_log_data;
-
-/* Struct: smart_log_summary
- * -------------------------
- * Top level log summary containing upto 5 errors
- */
-typedef struct __attribute__((packed)) {
-  uint8_t version;
-  uint8_t index;
-  smart_log_data data[5];
-  uint16_t count;
-  uint8_t reserved[57];
-  uint8_t checksum;
-} smart_log_summary;
+const size_t SECTOR_SIZE = 512;
 
 /*
  * Function: version
@@ -259,7 +65,9 @@ typedef struct __attribute__((packed)) {
  * Print out the version string
  */
 void version() {
-  printf(BINARY " v" VERSION "\n");
+
+  cout << BINARY << " v" << VERSION << endl;
+
 }
 
 /*
@@ -269,8 +77,8 @@ void version() {
  */
 void usage() {
 
-  printf("Usage:\n");
-  printf(BINARY " [-d <device>]\n");
+  cout << "Usage:" << endl
+       << BINARY << " [-d <device>]" << endl;
 
 }
 
@@ -282,18 +90,21 @@ void usage() {
 void help() {
 
   version();
-  printf("(C) 2015 Simon Murray <spjmurray@yahoo.co.uk>\n");
-  printf("\n");
+
+  cout << "(C) 2015 Simon Murray <spjmurray@yahoo.co.uk>" << endl
+       << endl;
+
   usage();
-  printf("\n");
-  printf("Options:\n");
-  printf("-h, --help\n");
-  printf("   Print detailed help\n");
-  printf("-v, --version\n");
-  printf("   Print version information\n");
-  printf("-d, --device=DEVICE\n");
-  printf("   Select device DEVICE\n");
-  printf("\n");
+
+  cout << endl
+       << "Options:" << endl
+       << "-h, --help" << endl
+       << "   Print detailed help" << endl
+       << "-v, --version" << endl
+       << "   Print version information" << endl
+       << "-d, --device=DEVICE" << endl
+       << "   Select device DEVICE" << endl
+       << endl;
 
 }
 
@@ -436,7 +247,7 @@ void sgio(int fd, unsigned char* cmdp, int cmd_len, unsigned char* dxferp, int d
   sgio_hdr.sbp = sense;
 
   if(ioctl(fd, SG_IO, &sgio_hdr) < 0) {
-    fprintf(stderr, "UNKNOWN: SG_IO ioctl error\n");
+    cerr << "UNKNOWN: SG_IO ioctl error" << endl;
     exit(NAGIOS_UNKNOWN);
   }
 
@@ -587,6 +398,7 @@ uint64_t get_raw(const smart_attribute* attribute) {
  */
 void dump_raw(ostream& o, uint8_t id, uint64_t raw) {
 
+  // Logic shamelessly lifted from smartmontools
   switch(id) {
     case 3:   // Spin up time
     case 5:   // Reallocated sector count
@@ -604,7 +416,7 @@ void dump_raw(ostream& o, uint8_t id, uint64_t raw) {
     default:
       break;
   }
-  o << raw;
+  o << dec << raw;
 
 }
 
@@ -613,12 +425,12 @@ void dump_raw(ostream& o, uint8_t id, uint64_t raw) {
  * --------------------------------
  * Checks attributes against vendor thresholds
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
- * rc: Reference to the current return code
+ * code: Reference to the current return code
  * crit: Reference to a counter of critical attributes
  * warn: Reference to a counter of advisory attributes
  * perfdata: Output stream to dump performance data to
  */
-void check_smart_attributes(int fd, int& rc, int& crit, int& warn, ostream& perfdata) {
+void check_smart_attributes(int fd, int& code, int& crit, int& warn, ostream& perfdata) {
 
   // Load the SMART data and thresholds pages
   smart_data sd;
@@ -634,16 +446,16 @@ void check_smart_attributes(int fd, int& rc, int& crit, int& warn, ostream& perf
     if(!sd.attributes[i].id)
       continue;
 
+    // Check the validity of the attribute value and whether the threshold has been exceeded
     if(sd.attributes[i].value > 0x00 &&
        sd.attributes[i].value < 0xfe &&
        sd.attributes[i].value <= st.thresholds[i].threshold) {
 
       // Predicted failure is within 24 hours, otherwise the device lifespan has been exceeded
-      if(sd.attributes[i].flags & 0x1) {
+      if(sd.attributes[i].flags & 0x1)
         crit++;
-      } else {
+      else
         warn++;
-      }
 
     }
 
@@ -656,12 +468,11 @@ void check_smart_attributes(int fd, int& rc, int& crit, int& warn, ostream& perf
   }
 
   // Determine the state to report
-  if(warn) {
-    rc = MAX(rc, NAGIOS_WARNING);
-  }
-  if(crit) {
-    rc = MAX(rc, NAGIOS_CRITICAL);
-  }
+  if(warn)
+    code = max(code, NAGIOS_WARNING);
+
+  if(crit)
+    code = max(code, NAGIOS_CRITICAL);
 
 }
 
@@ -671,13 +482,13 @@ void check_smart_attributes(int fd, int& rc, int& crit, int& warn, ostream& perf
  * Checks for the existence of SMART logs
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
- * rc: Reference to the current return code
+ * code: Reference to the current return code
  * logs: Reference to a count of the number of SMART logs
  */
-void check_smart_log(int fd, int& rc, int& logs) {
+void check_smart_log(int fd, int& code, int& logs) {
 
   // Read the SMART log directory
-  ata_log_directory log_directory;
+  smart_log_directory log_directory;
   ata_smart_read_log_directory(fd, (unsigned char*)&log_directory);
 
   // Calculate the number of SMART log sectors to read and allocate a buffer
@@ -693,9 +504,8 @@ void check_smart_log(int fd, int& rc, int& logs) {
 
   delete [] summaries;
 
-  if(logs) {
-    rc = MAX(rc, NAGIOS_WARNING);
-  }
+  if(logs)
+    code = max(code, NAGIOS_WARNING);
 
 }
 
@@ -708,7 +518,7 @@ void check_smart_log(int fd, int& rc, int& logs) {
  */
 int main(int argc, char** argv) {
 
-  int c;
+  const char* device = 0;
 
   static struct option long_options[] = {
     { "help",    no_argument,       0, 'h' },
@@ -717,8 +527,7 @@ int main(int argc, char** argv) {
     { 0,         0,                 0, 0   }
   };
 
-  const char* device = 0;
-
+  int c;
   while((c = getopt_long(argc, argv, "hvd:", long_options, 0)) != -1) {
     switch(c) {
       case 'h':
@@ -744,13 +553,13 @@ int main(int argc, char** argv) {
 
   int fd = open(device, O_RDWR);
   if(fd == -1) {
-    fprintf(stderr, "UNKNOWN: unable to open device %s\n", device);
+    cerr << "UNKNOWN: unable to open device " << device << endl;
     exit(NAGIOS_UNKNOWN);
   }
 
   int sg_version;
   if((ioctl(fd, SG_GET_VERSION_NUM, &sg_version) == -1) || sg_version < 30000) {
-    fprintf(stderr, "UNKNOWN: %s is either not an sg device, or the driver is old\n", device);
+    cerr << "UNKNOWN: " << device << " is either not an sg device, or the driver is old" << endl;
     exit(NAGIOS_UNKNOWN);
   }
 
@@ -759,32 +568,32 @@ int main(int argc, char** argv) {
   ata_identify(fd, (unsigned char*)identify);
 
   if(~identify[82] & 0x01) {
-    printf("OK: SMART feature set unsupported\n");
+    cout << "OK: SMART feature set unsupported" << endl;
     exit(NAGIOS_OK);
   }
 
   if(~identify[85] & 0x01) {
-    printf("UNKNOWN: SMART feature set disabled\n");
+    cout << "UNKNOWN: SMART feature set disabled" << endl;
     exit(NAGIOS_UNKNOWN);
   }
 
-  int rc = NAGIOS_OK;
+  int code = NAGIOS_OK;
   int crit = 0;
   int warn = 0;
   int logs = 0;
   stringstream perfdata;
 
   // Perform the checks
-  check_smart_attributes(fd, rc, crit, warn, perfdata);
-  check_smart_log(fd, rc, logs);
+  check_smart_attributes(fd, code, crit, warn, perfdata);
+  check_smart_log(fd, code, logs);
 
   // Print out the results and performance data
-  const char* statuses[] = { "OK", "WARNING", "CRITICAL" };
-  cout << statuses[rc] << ": predicted fails " << crit << ", advisories " << warn
+  const char* statuse[] = { "OK", "WARNING", "CRITICAL" };
+  cout << statuse[code] << ": predicted fails " << crit << ", advisories " << warn
        << ", errors " << logs << " |" << perfdata.str() << endl;
 
   close(fd);
 
-  return rc;
+  return code;
 
 }
