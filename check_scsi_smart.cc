@@ -259,19 +259,20 @@ void sgio(int fd, unsigned char* cmdp, int cmd_len, unsigned char* dxferp, int d
  * Send an IDENTIFY command to the ATA device and recieve the data
  *
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
- * buf: Data buffer to receive the data into, must be at least 512B
+ * buf: Data buffer to receive the data into, must be at least SECTOR
  */
 void ata_identify(int fd, unsigned char* buf) {
 
   sbc_ata_pass_through ata_pass_through;
-
   memset((unsigned char*)&ata_pass_through, 0, sizeof(sbc_ata_pass_through));
+
   ata_pass_through.operation_code = SBC_ATA_PASS_THROUGH;
   ata_pass_through.protocol       = ATA_PROTOCOL_PIO_DATA_IN;
-  ata_pass_through.t_dir          = 1; /* transfer from device */
-  ata_pass_through.t_length       = 2; /* length encoded in count */
-  ata_pass_through.byte_block     = 1; /* length in sectors */
-  ata_pass_through.count_7_0      = 1; /* transfer 1 sector */
+  ata_pass_through.t_dir          = ATA_TRANSFER_DIRECTION_FROM_DEVICE;
+  ata_pass_through.byte_block     = ATA_TRANSFER_SIZE_BLOCK;
+  ata_pass_through.t_type         = ATA_TRANSFER_TYPE_SECTOR;
+  ata_pass_through.t_length       = ATA_TRANSFER_LENGTH_COUNT;
+  ata_pass_through.count_7_0      = 1;
   ata_pass_through.command        = ATA_IDENTIFY_DEVICE;
 
   sgio(fd, (unsigned char*)&ata_pass_through, sizeof(ata_pass_through), buf, SECTOR_SIZE);
@@ -284,19 +285,20 @@ void ata_identify(int fd, unsigned char* buf) {
  * Send a SMART READ DATA command to the ATA device and recieve the data
  *
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
- * buf: Data buffer to receive the data into, must be at least 512B
+ * buf: Data buffer to receive the data into, must be at least SECTOR
  */
 void ata_smart_read_data(int fd, unsigned char* buf) {
 
   sbc_ata_pass_through ata_pass_through;
-
   memset((unsigned char*)&ata_pass_through, 0, sizeof(sbc_ata_pass_through));
+
   ata_pass_through.operation_code = SBC_ATA_PASS_THROUGH;
   ata_pass_through.protocol       = ATA_PROTOCOL_PIO_DATA_IN;
-  ata_pass_through.t_dir          = 1; /* transfer from device */
-  ata_pass_through.t_length       = 2; /* length encoded in count */
-  ata_pass_through.byte_block     = 1; /* length in sectors */
-  ata_pass_through.count_7_0      = 1; /* transfer 1 sector */
+  ata_pass_through.t_dir          = ATA_TRANSFER_DIRECTION_FROM_DEVICE;
+  ata_pass_through.byte_block     = ATA_TRANSFER_SIZE_BLOCK;
+  ata_pass_through.t_type         = ATA_TRANSFER_TYPE_SECTOR;
+  ata_pass_through.t_length       = ATA_TRANSFER_LENGTH_COUNT;
+  ata_pass_through.count_7_0      = 1;
   ata_pass_through.command        = ATA_SMART;
   ata_pass_through.features_7_0   = SMART_READ_DATA;
   ata_pass_through.lba_23_16      = 0xc2;
@@ -312,19 +314,20 @@ void ata_smart_read_data(int fd, unsigned char* buf) {
  * Send a SMART READ THRESHOLDS command to the ATA device and recieve the data
  *
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
- * buf: Data buffer to receive the data into, must be at least 512B
+ * buf: Data buffer to receive the data into, must be at least SECTOR
  */
 void ata_smart_read_thresholds(int fd, unsigned char* buf) {
 
   sbc_ata_pass_through ata_pass_through;
-
   memset((unsigned char*)&ata_pass_through, 0, sizeof(sbc_ata_pass_through));
+
   ata_pass_through.operation_code = SBC_ATA_PASS_THROUGH;
   ata_pass_through.protocol       = ATA_PROTOCOL_PIO_DATA_IN;
-  ata_pass_through.t_dir          = 1; /* transfer from device */
-  ata_pass_through.t_length       = 2; /* length encoded in count */
-  ata_pass_through.byte_block     = 1; /* length in sectors */
-  ata_pass_through.count_7_0      = 1; /* transfer 1 sector */
+  ata_pass_through.t_dir          = ATA_TRANSFER_DIRECTION_FROM_DEVICE;
+  ata_pass_through.byte_block     = ATA_TRANSFER_SIZE_BLOCK;
+  ata_pass_through.t_type         = ATA_TRANSFER_TYPE_SECTOR;
+  ata_pass_through.t_length       = ATA_TRANSFER_LENGTH_COUNT;
+  ata_pass_through.count_7_0      = 1;
   ata_pass_through.command        = ATA_SMART;
   ata_pass_through.features_7_0   = SMART_READ_THRESHOLDS;
   ata_pass_through.lba_23_16      = 0xc2;
@@ -339,20 +342,21 @@ void ata_smart_read_thresholds(int fd, unsigned char* buf) {
  * ----------------------------
  * Send a SMART READ LOG command to the ATA device and receive the data
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
- * buf: Data buffer to receive the data into, must be at least sectors * 512B
+ * buf: Data buffer to receive the data into, must be at least sectors * SECTOR
  *      bytes.
  * log: Log to read See A.1 for ATA8-ACS
  */
 void ata_smart_read_log(int fd, unsigned char* buf, int log, uint16_t sectors) {
 
   sbc_ata_pass_through ata_pass_through;
-
   memset((unsigned char*)&ata_pass_through, 0, sizeof(sbc_ata_pass_through));
+
   ata_pass_through.operation_code = SBC_ATA_PASS_THROUGH;
   ata_pass_through.protocol       = ATA_PROTOCOL_PIO_DATA_IN;
-  ata_pass_through.t_dir          = 1; /* transfer from device */
-  ata_pass_through.t_length       = 2; /* length encoded in count */
-  ata_pass_through.byte_block     = 1; /* length in sectors */
+  ata_pass_through.t_dir          = ATA_TRANSFER_DIRECTION_FROM_DEVICE;
+  ata_pass_through.byte_block     = ATA_TRANSFER_SIZE_BLOCK;
+  ata_pass_through.t_type         = ATA_TRANSFER_TYPE_SECTOR;
+  ata_pass_through.t_length       = ATA_TRANSFER_LENGTH_COUNT;
   ata_pass_through.count_15_8     = sectors >> 8;
   ata_pass_through.count_7_0      = sectors;
   ata_pass_through.command        = ATA_SMART;
@@ -370,10 +374,12 @@ void ata_smart_read_log(int fd, unsigned char* buf, int log, uint16_t sectors) {
  * --------------------------------------
  * Reads the SMART flog directory
  * fd: File descriptor pointing at a SCSI or SCSI generic device nod
- * buf: Data buffer to receive the data into, must be at least 512B
+ * buf: Data buffer to receive the data into, must be at least SECTOR
  */
 void ata_smart_read_log_directory(int fd, unsigned char* buf) {
+
   ata_smart_read_log(fd, buf, ATA_LOG_ADDRESS_DIRECTORY, 1);
+
 }
 
 /*

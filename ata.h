@@ -32,6 +32,24 @@ const uint8_t ATA_SMART           = 0xb0;
 /* ATA protocols */
 const uint8_t ATA_PROTOCOL_PIO_DATA_IN = 0x4;
 
+/* ATA transfer direction */
+const uint8_t ATA_TRANSFER_DIRECTION_TO_DEVICE   = 0x0;
+const uint8_t ATA_TRANSFER_DIRECTION_FROM_DEVICE = 0x1;
+
+/* ATA block transfer mode */
+const uint8_t ATA_TRANSFER_SIZE_BYTE  = 0x0;
+const uint8_t ATA_TRANSFER_SIZE_BLOCK = 0x1;
+
+/* ATA block transfer type */
+const uint8_t ATA_TRANSFER_TYPE_SECTOR         = 0x0;
+const uint8_t ATA_TRANSFER_TYPE_LOGICAL_SECTOR = 0x1;
+
+/* ATA transfer length location */
+const uint8_t ATA_TRANSFER_LENGTH_NONE     = 0x0;
+const uint8_t ATA_TRANSFER_LENGTH_FEATURES = 0x1;
+const uint8_t ATA_TRANSFER_LENGTH_COUNT    = 0x2;
+const uint8_t ATA_TRANSFER_LENGTH_TPSIU    = 0x3;
+
 /* ATA Log Addresses */
 const uint8_t ATA_LOG_ADDRESS_DIRECTORY = 0x0;
 const uint8_t ATA_LOG_ADDRESS_SMART     = 0x1;
