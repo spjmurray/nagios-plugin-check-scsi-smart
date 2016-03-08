@@ -109,118 +109,6 @@ void help() {
 }
 
 /*
- * Function: smart_id_to_text
- * --------------------------
- * Converts a SMART attribute ID to ascii text
- *
- * id: SMART attribute identifier
- *
- * returns: Text representation for the SMART attribute identifier if valid
- *          or "Unknown Attribute" otherwise
- */
-void dump_smart_attribute_id(ostream& o, uint8_t id) {
-
-  static struct attribute_meta {
-    unsigned char id;
-    const char* name;
-  } attribute_meta[] = {
-    { 0x01, "read_error_rate" },
-    { 0x02, "throughput_performance" },
-    { 0x03, "spin_up_time" },
-    { 0x04, "start_stop_count" },
-    { 0x05, "reallocated_sectors_count" },
-    { 0x06, "read_channel_margin" },
-    { 0x07, "seek_error_rate" },
-    { 0x08, "seek_time_performance" },
-    { 0x09, "power_on_hours" },
-    { 0x0a, "spin_retry_count" },
-    { 0x0b, "recalibration_retries" },
-    { 0x0c, "power_cycle_count" },
-    { 0x0d, "soft_read_error_rate" },
-    { 0x16, "current_helium_level" },
-    { 0xaa, "available_reserved_space" },
-    { 0xab, "ssd_program_fail_count" },
-    { 0xac, "ssd_erase_fail_count" },
-    { 0xad, "ssd_wear_leveling_count" },
-    { 0xae, "unexpected_power_loss_count" },
-    { 0xaf, "power_loss_protection_failure" },
-    { 0xb0, "erase_fail_count" },
-    { 0xb1, "wear_range_delta" },
-    { 0xb3, "used_reserved_block_count_total" },
-    { 0xb4, "unused_reserved_block_count_total" },
-    { 0xb5, "program_fail_count_total" },
-    { 0xb6, "erase_fail_count" },
-    { 0xb7, "sata_downshift_error_count" },
-    { 0xb8, "end_to_end_error" },
-    { 0xb9, "head_stability" },
-    { 0xba, "induced_op_vibration_detection" },
-    { 0xbb, "reported_uncorrectable_errors" },
-    { 0xbc, "command_timeout" },
-    { 0xbd, "high_fly_writes" },
-    { 0xbe, "airflow_temperature" },
-    { 0xbf, "g_sense_error_rate" },
-    { 0xc0, "power_off_retract_count" },
-    { 0xc1, "load_cycle_count" },
-    { 0xc2, "temperature" },
-    { 0xc3, "hardware_ecc_recovered" },
-    { 0xc4, "reallocation_event_count" },
-    { 0xc5, "current_pending_sector_count" },
-    { 0xc6, "uncorrectable_sector_count" },
-    { 0xc7, "ultradma_crc_error_count" },
-    { 0xc8, "multi_zone_error_rate" },
-    { 0xc9, "soft_read_error_rate" },
-    { 0xca, "data_address_mark_errors" },
-    { 0xcb, "run_out_cancel" },
-    { 0xcc, "soft_ecc_correction" },
-    { 0xcd, "thermal_asperity_rate" },
-    { 0xce, "flying_height" },
-    { 0xcf, "spin_height_current" },
-    { 0xd0, "spin_buzz" },
-    { 0xd1, "offline_seek_performance" },
-    { 0xd2, "vibration_during_write" },
-    { 0xd3, "wibration_during_write" },
-    { 0xd4, "shock_during_write" },
-    { 0xdc, "disk_shift" },
-    { 0xdd, "g_sense_error_rate" },
-    { 0xde, "loaded_hours" },
-    { 0xdf, "load_unload_retry_count" },
-    { 0xe0, "load_friction" },
-    { 0xe1, "load_unload_cycle_count" },
-    { 0xe2, "load_in_time" },
-    { 0xe3, "torque_amplification_count" },
-    { 0xe4, "power_off_retract_cycle" },
-    { 0xe6, "drive_life_protection_status" },
-    { 0xe7, "temperature" },
-    { 0xe8, "available_reserved_space" },
-    { 0xe9, "media_wearout_indicator" },
-    { 0xea, "average_erase_count" },
-    { 0xeb, "good_block_count" },
-    { 0xf0, "flying_head_hours" },
-    { 0xf1, "total_lbas_written" },
-    { 0xf2, "total_lbas_read" },
-    { 0xf3, "total_lbas_written_expanded" },
-    { 0xf4, "total_lbas_read_expanded" },
-    { 0xf9, "nand_writes_1gib" },
-    { 0xfa, "read_error_retry_rate" },
-    { 0xfb, "minimum_spares_remaining" },
-    { 0xfc, "newly_added_bad_flash_block" },
-    { 0xfe, "free_fall_protection" },
-    { 0x00, 0 }
-  };
-
-  struct attribute_meta* meta = attribute_meta;
-  for(; meta->id; meta++) {
-    if(meta->id == id) {
-      o << (unsigned int)id << "_" << meta->name;
-      return;
-    }
-  }
-
-  o << std::dec << (unsigned int)id << "_unknown";
-
-}
-
-/*
  * Function: sgio
  * --------------
  * Sends a CDB to the target device and recieves a response
@@ -467,9 +355,8 @@ void check_smart_attributes(int fd, int& code, int& crit, int& warn, ostream& pe
 
     // Accumulate the performance data
     uint8_t id = sd.attributes[i].id;
-    perfdata << " ";
-    dump_smart_attribute_id(perfdata, id);
-    perfdata << "=";
+
+    perfdata << " " << SmartID(id) << "=";
     dump_raw(perfdata, id, get_raw(sd.attributes + i));
   }
 

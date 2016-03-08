@@ -1,1 +1,2 @@
 check_scsi_smart
+*.o

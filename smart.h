@@ -24,6 +24,9 @@
 #define _smart_H_
 
 #include <stdint.h>
+#include <iostream>
+
+using namespace std;
 
 /* SMART functions */
 const uint8_t SMART_READ_DATA       = 0xd0;
@@ -175,5 +178,32 @@ typedef struct __attribute__((packed)) {
   uint8_t reserved[57];
   uint8_t checksum;
 } smart_log_summary;
+
+/*
+ * Class: SmartID
+ * ---------------
+ * Wraps up the smart ID and formatting
+ */
+class SmartID {
+
+public:
+  SmartID(uint8_t id)
+  : id(id) {
+  }
+
+  friend ostream& operator<<(ostream& o, const SmartID& id);
+
+private:
+  uint8_t id;
+};
+
+/**
+ * Function: operator<<(ostream&, SmartID&)
+ * ----------------------------------------
+ * Funcction to dump human readable text to an output stream
+ * o: Class implmenting std::ostream
+ * id: Reference to a SmartID class
+ */
+ostream& operator<<(ostream& o, const SmartID& id);
 
 #endif//_smart_H_

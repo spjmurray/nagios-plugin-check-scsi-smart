@@ -1,15 +1,20 @@
-CC=g++
-CFLAGS=-O2 -Wall
+CXX=g++
+CXXFLAGS=-O2 -Wall
+LDFLAGS=-O2 -Wall
 EXE=check_scsi_smart
-SOURCE=check_scsi_smart.cc
+SOURCE=check_scsi_smart.cc smart.cc
+OBJECT=$(patsubst %.cc,%.o,$(SOURCE))
 PREFIX=/usr
 LIBDIR=lib
 
 
 all: $(EXE)
 
-$(EXE): $(SOURCE)
-	$(CC) $(CFLAGS) -o $@ $<
+$(EXE): $(OBJECT)
+	$(CXX) $(LDFLAGS) -o $@ $(OBJECT)
+
+%.o: %.cc
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 install:
 	mkdir -p ${DESTDIR}${PREFIX}/${LIBDIR}/nagios/plugins
