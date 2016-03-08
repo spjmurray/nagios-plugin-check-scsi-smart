@@ -436,8 +436,8 @@ int main(int argc, char** argv) {
   check_smart_log(fd, code, logs);
 
   // Print out the results and performance data
-  const char* statuse[] = { "OK", "WARNING", "CRITICAL" };
-  cout << statuse[code] << ": predicted fails " << crit << ", advisories " << warn
+  const char* status[] = { "OK", "WARNING", "CRITICAL" };
+  cout << status[code] << ": predicted fails " << crit << ", advisories " << warn
        << ", errors " << logs << " |" << perfdata.str() << endl;
 
   close(fd);
