@@ -180,30 +180,36 @@ typedef struct __attribute__((packed)) {
 } smart_log_summary;
 
 /*
- * Class: SmartID
+ * Class: SmartAttribute
  * ---------------
- * Wraps up the smart ID and formatting
+ * Wraps up the smart attribute and formatting
  */
-class SmartID {
+class SmartAttribute {
 
 public:
-  SmartID(uint8_t id)
-  : id(id) {
-  }
+  /**
+   * Function: SmartAttribute::SmartAttribute(const smart_attribute&)
+   * ----------------------------------------------------------------
+   * Class constructor to munge raw data structures into a sensible format
+   * attribute: Reference to a smart_attribute structure
+   */
+  SmartAttribute(const smart_attribute& attribute);
 
-  friend ostream& operator<<(ostream& o, const SmartID& id);
+  friend ostream& operator<<(ostream& o, const SmartAttribute& id);
 
 private:
   uint8_t id;
+  uint64_t raw;
+
 };
 
 /**
- * Function: operator<<(ostream&, SmartID&)
+ * Function: operator<<(ostream&, const SmartAttribute&)
  * ----------------------------------------
- * Funcction to dump human readable text to an output stream
+ * Function to dump human readable text to an output stream
  * o: Class implmenting std::ostream
- * id: Reference to a SmartID class
+ * id: Reference to a SmartAttribute class
  */
-ostream& operator<<(ostream& o, const SmartID& id);
+ostream& operator<<(ostream& o, const SmartAttribute& attribute);
 
 #endif//_smart_H_

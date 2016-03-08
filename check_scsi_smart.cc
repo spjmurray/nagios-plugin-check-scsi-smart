@@ -152,7 +152,7 @@ void sgio(int fd, unsigned char* cmdp, int cmd_len, unsigned char* dxferp, int d
 void ata_identify(int fd, unsigned char* buf) {
 
   sbc_ata_pass_through ata_pass_through;
-  memset((unsigned char*)&ata_pass_through, 0, sizeof(sbc_ata_pass_through));
+  memset(reinterpret_cast<unsigned char*>(&ata_pass_through), 0, sizeof(sbc_ata_pass_through));
 
   ata_pass_through.operation_code = SBC_ATA_PASS_THROUGH;
   ata_pass_through.protocol       = ATA_PROTOCOL_PIO_DATA_IN;
@@ -163,7 +163,7 @@ void ata_identify(int fd, unsigned char* buf) {
   ata_pass_through.count_7_0      = 1;
   ata_pass_through.command        = ATA_IDENTIFY_DEVICE;
 
-  sgio(fd, (unsigned char*)&ata_pass_through, sizeof(ata_pass_through), buf, SECTOR_SIZE);
+  sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, SECTOR_SIZE);
 
 }
 
@@ -178,7 +178,7 @@ void ata_identify(int fd, unsigned char* buf) {
 void ata_smart_read_data(int fd, unsigned char* buf) {
 
   sbc_ata_pass_through ata_pass_through;
-  memset((unsigned char*)&ata_pass_through, 0, sizeof(sbc_ata_pass_through));
+  memset(reinterpret_cast<unsigned char*>(&ata_pass_through), 0, sizeof(sbc_ata_pass_through));
 
   ata_pass_through.operation_code = SBC_ATA_PASS_THROUGH;
   ata_pass_through.protocol       = ATA_PROTOCOL_PIO_DATA_IN;
@@ -192,7 +192,7 @@ void ata_smart_read_data(int fd, unsigned char* buf) {
   ata_pass_through.lba_23_16      = 0xc2;
   ata_pass_through.lba_15_8       = 0x4f;
 
-  sgio(fd, (unsigned char*)&ata_pass_through, sizeof(ata_pass_through), buf, SECTOR_SIZE);
+  sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, SECTOR_SIZE);
 
 }
 
@@ -207,7 +207,7 @@ void ata_smart_read_data(int fd, unsigned char* buf) {
 void ata_smart_read_thresholds(int fd, unsigned char* buf) {
 
   sbc_ata_pass_through ata_pass_through;
-  memset((unsigned char*)&ata_pass_through, 0, sizeof(sbc_ata_pass_through));
+  memset(reinterpret_cast<unsigned char*>(&ata_pass_through), 0, sizeof(sbc_ata_pass_through));
 
   ata_pass_through.operation_code = SBC_ATA_PASS_THROUGH;
   ata_pass_through.protocol       = ATA_PROTOCOL_PIO_DATA_IN;
@@ -221,7 +221,7 @@ void ata_smart_read_thresholds(int fd, unsigned char* buf) {
   ata_pass_through.lba_23_16      = 0xc2;
   ata_pass_through.lba_15_8       = 0x4f;
 
-  sgio(fd, (unsigned char*)&ata_pass_through, sizeof(ata_pass_through), buf, SECTOR_SIZE);
+  sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, SECTOR_SIZE);
 
 }
 
@@ -237,7 +237,7 @@ void ata_smart_read_thresholds(int fd, unsigned char* buf) {
 void ata_smart_read_log(int fd, unsigned char* buf, int log, uint16_t sectors) {
 
   sbc_ata_pass_through ata_pass_through;
-  memset((unsigned char*)&ata_pass_through, 0, sizeof(sbc_ata_pass_through));
+  memset(reinterpret_cast<unsigned char*>(&ata_pass_through), 0, sizeof(sbc_ata_pass_through));
 
   ata_pass_through.operation_code = SBC_ATA_PASS_THROUGH;
   ata_pass_through.protocol       = ATA_PROTOCOL_PIO_DATA_IN;
@@ -253,7 +253,7 @@ void ata_smart_read_log(int fd, unsigned char* buf, int log, uint16_t sectors) {
   ata_pass_through.lba_15_8       = 0x4f;
   ata_pass_through.lba_7_0        = log;
 
-  sgio(fd, (unsigned char*)&ata_pass_through, sizeof(ata_pass_through), buf, sectors * SECTOR_SIZE);
+  sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, sectors * SECTOR_SIZE);
 
 }
 
@@ -271,50 +271,6 @@ void ata_smart_read_log_directory(int fd, unsigned char* buf) {
 }
 
 /*
- * Function: get_raw
- * -----------------
- * Reads the raw value from a SMART attribute
- * attribute: Pointer to a SMART attribute
- */
-uint64_t get_raw(const smart_attribute* attribute) {
-
-  return (((uint64_t)attribute->raw_hi) << 32) | (uint64_t)attribute->raw_lo;
-
-}
-
-/*
- * Function: dump_raw
- * ------------------
- * Apply formatting to and print raw value to a string
- * buf: Output buffer
- * id: SMART attribute ID
- * raw: Raw value
- */
-void dump_raw(ostream& o, uint8_t id, uint64_t raw) {
-
-  // Logic shamelessly lifted from smartmontools
-  switch(id) {
-    case 3:   // Spin up time
-    case 5:   // Reallocated sector count
-    case 196: // Reallocated event count
-      raw &= 0xffff;
-      break;
-    case 9:   // Power on hours
-    case 240: // Head flying hours
-      raw &= 0xffffff;
-      break;
-    case 190: // Temperature
-    case 194: // Temperature
-      raw &= 0xff;
-      break;
-    default:
-      break;
-  }
-  o << dec << raw;
-
-}
-
-/*
  * Function: check_smart_attributes
  * --------------------------------
  * Checks attributes against vendor thresholds
@@ -328,10 +284,10 @@ void check_smart_attributes(int fd, int& code, int& crit, int& warn, ostream& pe
 
   // Load the SMART data and thresholds pages
   smart_data sd;
-  ata_smart_read_data(fd, (unsigned char*)&sd);
+  ata_smart_read_data(fd, reinterpret_cast<unsigned char*>(&sd));
 
   smart_thresholds st;
-  ata_smart_read_thresholds(fd, (unsigned char*)&st);
+  ata_smart_read_thresholds(fd, reinterpret_cast<unsigned char*>(&st));
 
   // Perform actual SMART threshold checks
   for(int i=0; i<SMART_ATTRIBUTE_NUM; i++) {
@@ -354,10 +310,8 @@ void check_smart_attributes(int fd, int& code, int& crit, int& warn, ostream& pe
     }
 
     // Accumulate the performance data
-    uint8_t id = sd.attributes[i].id;
+    perfdata << " " << SmartAttribute(sd.attributes[i]);
 
-    perfdata << " " << SmartID(id) << "=";
-    dump_raw(perfdata, id, get_raw(sd.attributes + i));
   }
 
   // Determine the state to report
@@ -382,23 +336,24 @@ void check_smart_log(int fd, int& code, int& logs) {
 
   // Read the SMART log directory
   smart_log_directory log_directory;
-  ata_smart_read_log_directory(fd, (unsigned char*)&log_directory);
+  ata_smart_read_log_directory(fd, reinterpret_cast<unsigned char*>(&log_directory));
 
   // Calculate the number of SMART log sectors to read and allocate a buffer
   uint16_t smart_log_sectors = log_directory.data_blocks[ATA_LOG_ADDRESS_SMART];
   smart_log_summary* summaries = new smart_log_summary[smart_log_sectors];
 
   // Read the logs in
-  ata_smart_read_log(fd, (unsigned char*)summaries, ATA_LOG_ADDRESS_SMART, smart_log_sectors);
+  ata_smart_read_log(fd, reinterpret_cast<unsigned char*>(summaries), ATA_LOG_ADDRESS_SMART, smart_log_sectors);
 
+  // Check for any logged errors
   for(int i=0; i<smart_log_sectors; i++) {
     logs += summaries[i].count;
   }
 
-  delete [] summaries;
-
   if(logs)
     code = max(code, NAGIOS_WARNING);
+
+  delete [] summaries;
 
 }
 
@@ -458,7 +413,7 @@ int main(int argc, char** argv) {
 
   // Check the device can use SMART and that it is enabled
   uint16_t identify[SECTOR_SIZE / 2];
-  ata_identify(fd, (unsigned char*)identify);
+  ata_identify(fd, reinterpret_cast<unsigned char*>(identify));
 
   if(~identify[82] & 0x01) {
     cout << "OK: SMART feature set unsupported" << endl;

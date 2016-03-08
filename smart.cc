@@ -23,13 +23,24 @@
 #include "smart.h"
 
 /**
- * Function: operator<<(ostream&, SmartID&)
- * ----------------------------------------
- * Funcction to dump human readable text to an output stream
- * o: Class implmenting std::ostream
- * id: Reference to a SmartID class
+ * Function: SmartAttribute::SmartAttribute(const smart_attribute&)
+ * ----------------------------------------------------------------
+ * Class constructor to munge raw data structures into a sensible format
+ * attribute: Reference to a smart_attribute structure
  */
-ostream& operator<<(ostream& o, const SmartID& id) {
+SmartAttribute::SmartAttribute(const smart_attribute& attribute)
+: id(attribute.id),
+  raw((static_cast<uint64_t>(attribute.raw_hi) << 32) | static_cast<uint64_t>(attribute.raw_lo)) {
+}
+
+/**
+ * Function: operator<<(ostream&, const SmartAttribute&)
+ * ----------------------------------------
+ * Function to dump human readable text to an output stream
+ * o: Class implmenting std::ostream
+ * id: Reference to a SmartAttribute class
+ */
+ostream& operator<<(ostream& o, const SmartAttribute& attribute) {
 
   static const char* labels[] = {
     // 0x00
@@ -306,7 +317,28 @@ ostream& operator<<(ostream& o, const SmartID& id) {
     "unknown",
   };
 
-  o << dec << (unsigned int)id.id << "_" << labels[id.id];
+  uint64_t raw = attribute.raw;
+
+  // Logic shamelessly lifted from smartmontools
+  switch(attribute.id) {
+    case 3:   // Spin up time
+    case 5:   // Reallocated sector count
+    case 196: // Reallocated event count
+      raw &= 0xffff;
+      break;
+    case 9:   // Power on hours
+    case 240: // Head flying hours
+      raw &= 0xffffff;
+      break;
+    case 190: // Temperature
+    case 194: // Temperature
+      raw &= 0xff;
+      break;
+    default:
+      break;
+  }
+
+  o << dec << static_cast<unsigned int>(attribute.id) << "_" << labels[attribute.id] << "=" << raw;
 
   return o;
 
