@@ -28,6 +28,10 @@
 
 using namespace std;
 
+/* Class Declarations */
+class SmartAttribute;
+class SmartThreshold;
+
 /* SMART functions */
 const uint8_t SMART_READ_DATA       = 0xd0;
 const uint8_t SMART_READ_THRESHOLDS = 0xd1;
@@ -195,10 +199,48 @@ public:
    */
   SmartAttribute(const smart_attribute& attribute);
 
+  /**
+   * Function SmartAttribute::getPreFail()
+   * -------------------------------------
+   * Return whether this attribute predicts failure within 24h
+   */
+  inline bool getPreFail() const {
+    return pre_fail;
+  }
+
+  /**
+   * Function: SmartAttribute::idValid()
+   * -----------------------------------
+   * Checks whether a SMART ID is valid
+   */
+  inline bool idValid() const {
+    return id != 0;
+  }
+
+  /**
+   * Function: SmartAttribute::valueValid()
+   * --------------------------------------
+   * Checks whether a SMART value is within the valid limits
+   */
+  inline bool valueValid() const {
+    return value > 0x0 && value < 0xfe;
+  }
+
+  /**
+   * Function: SmartAttribute::operator<=(const SmartThreshold&)
+   * -----------------------------------------------------------
+   * Compares a value to a threshold
+   * threshold: Reference to a SmartThreshold object to check against
+   */
+  bool operator<=(const SmartThreshold& threshold) const;
+
   friend ostream& operator<<(ostream& o, const SmartAttribute& id);
 
 private:
   uint8_t id;
+  bool pre_fail;
+  bool offline;
+  uint8_t value;
   uint64_t raw;
 
 };
@@ -211,5 +253,38 @@ private:
  * id: Reference to a SmartAttribute class
  */
 ostream& operator<<(ostream& o, const SmartAttribute& attribute);
+
+/**
+ * Class: SmartThreshold
+ * ---------------------
+ * Wrapper for a SMART threshold
+ */
+class SmartThreshold {
+
+public:
+
+  /**
+   * Function: SmartThreshold::SmartThreshold(const smart_threshold&)
+   * ----------------------------------------------------------------
+   * Class constructor to create a SmartThreshold object from raw data
+   * threshold: Reference to a smart_threshold object
+   */
+  SmartThreshold(const smart_threshold& threshold)
+  : threshold(threshold.threshold)
+  {}
+
+  /**
+   * Function: SmartThreshold::getThreshold()
+   * ----------------------------------------
+   * Accessor method for the threshold value
+   */
+  inline uint8_t getThreshold() const {
+    return threshold;
+  }
+
+private:
+  uint8_t threshold;
+
+};
 
 #endif//_smart_H_

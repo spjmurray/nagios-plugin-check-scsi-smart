@@ -292,17 +292,17 @@ void check_smart_attributes(int fd, int& code, int& crit, int& warn, ostream& pe
   // Perform actual SMART threshold checks
   for(int i=0; i<SMART_ATTRIBUTE_NUM; i++) {
 
-    // Attribute is invalid
-    if(!sd.attributes[i].id)
+    SmartAttribute attribute(sd.attributes[i]);
+    SmartThreshold threshold(st.thresholds[i]);
+
+    if(!attribute.idValid())
       continue;
 
     // Check the validity of the attribute value and whether the threshold has been exceeded
-    if(sd.attributes[i].value > 0x00 &&
-       sd.attributes[i].value < 0xfe &&
-       sd.attributes[i].value <= st.thresholds[i].threshold) {
+    if(attribute.valueValid() && (attribute <= threshold)) {
 
       // Predicted failure is within 24 hours, otherwise the device lifespan has been exceeded
-      if(sd.attributes[i].flags & 0x1)
+      if(attribute.getPreFail())
         crit++;
       else
         warn++;
@@ -310,7 +310,7 @@ void check_smart_attributes(int fd, int& code, int& crit, int& warn, ostream& pe
     }
 
     // Accumulate the performance data
-    perfdata << " " << SmartAttribute(sd.attributes[i]);
+    perfdata << " " << attribute;
 
   }
 

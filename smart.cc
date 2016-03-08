@@ -30,7 +30,22 @@
  */
 SmartAttribute::SmartAttribute(const smart_attribute& attribute)
 : id(attribute.id),
+  pre_fail(attribute.flags & 0x1),
+  offline(attribute.flags & 0x2),
+  value(attribute.value),
   raw((static_cast<uint64_t>(attribute.raw_hi) << 32) | static_cast<uint64_t>(attribute.raw_lo)) {
+}
+
+/**
+ * Function: SmartAttribute::operator<=(const SmartThreshold&)
+ * -----------------------------------------------------------
+ * Compares a value to a threshold
+ * threshold: Reference to a SmartThreshold object to check against
+ */
+bool SmartAttribute::operator<=(const SmartThreshold& threshold) const {
+
+  return value <= threshold.getThreshold();
+
 }
 
 /**
