@@ -45,19 +45,25 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
+#include <string>
+#include <vector>
+#include <map>
 
 using namespace std;
 
 const char* const BINARY  = "check_scsi_smart";
 const char* const VERSION = "1.1.1";
 
-/* Nagios return codes */
+// Nagios return codes
 const int NAGIOS_OK       = 0;
 const int NAGIOS_WARNING  = 1;
 const int NAGIOS_CRITICAL = 2;
 const int NAGIOS_UNKNOWN  = 3;
 
 const size_t SECTOR_SIZE = 512;
+
+// Mapping to hold attribute -> threshold data
+typedef map<uint8_t, uint64_t> SmartThresholdMap;
 
 /*
  * Function: version
@@ -91,7 +97,7 @@ void help() {
 
   version();
 
-  cout << "(C) 2015 Simon Murray <spjmurray@yahoo.co.uk>" << endl
+  cout << "(C) 2015-2016 Simon Murray <spjmurray@yahoo.co.uk>" << endl
        << endl;
 
   usage();
@@ -100,10 +106,14 @@ void help() {
        << "Options:" << endl
        << "-h, --help" << endl
        << "   Print detailed help" << endl
-       << "-v, --version" << endl
+       << "-V, --version" << endl
        << "   Print version information" << endl
        << "-d, --device=DEVICE" << endl
        << "   Select device DEVICE" << endl
+       << "-w, --warning=ID:THRESHOLD[,ID:THRESHOLD]" << endl
+       << "   Specify warning thresholds as a list of integer attributes to interger thresholds" << endl
+       << "-c, --critical=ID:THRESHOLD[,ID:THRESHOLD]" << endl
+       << "   Specify critical thresholds as a list of integer attributes to interger thresholds" << endl
        << endl;
 
 }
@@ -275,12 +285,17 @@ void ata_smart_read_log_directory(int fd, unsigned char* buf) {
  * --------------------------------
  * Checks attributes against vendor thresholds
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
+ * critical_thresholds: Map of atrribute IDs to raw thresholds
+ * warning_thresholds: Map of atrribute IDs to raw thresholds
  * code: Reference to the current return code
+ * prdfail: Reference to a counter of vendor predicted fails
+ * advisory: Reference to a counter of vendor advisory end of life
  * crit: Reference to a counter of critical attributes
  * warn: Reference to a counter of advisory attributes
  * perfdata: Output stream to dump performance data to
  */
-void check_smart_attributes(int fd, int& code, int& crit, int& warn, ostream& perfdata) {
+void check_smart_attributes(int fd, SmartThresholdMap& critical_thresholds, SmartThresholdMap& warning_thresholds,
+                            int& code, int& prdfail, int& advisory, int& crit, int& warn, ostream& perfdata) {
 
   // Load the SMART data and thresholds pages
   smart_data sd;
@@ -303,22 +318,38 @@ void check_smart_attributes(int fd, int& code, int& crit, int& warn, ostream& pe
 
       // Predicted failure is within 24 hours, otherwise the device lifespan has been exceeded
       if(attribute.getPreFail())
-        crit++;
+        prdfail++;
       else
-        warn++;
+        advisory++;
 
     }
 
+    // Check against custom raw thresholds
+    uint64_t crit_threshold = critical_thresholds[attribute.getID()];
+    uint64_t warn_threshold = warning_thresholds[attribute.getID()];
+
+    if(crit_threshold && (attribute.getRaw() >= crit_threshold)) {
+      crit++;
+    } else if(warn_threshold && (attribute.getRaw() >= warn_threshold)) {
+      warn++;
+    }
+
     // Accumulate the performance data
-    perfdata << " " << attribute;
+    perfdata << " " << attribute << ";";
+    if(warn_threshold)
+      perfdata << warn_threshold;
+    perfdata << ";";
+    if(crit_threshold)
+      perfdata << crit_threshold;
+    perfdata << ";;";
 
   }
 
   // Determine the state to report
-  if(warn)
+  if(advisory || warn)
     code = max(code, NAGIOS_WARNING);
 
-  if(crit)
+  if(prdfail || crit)
     code = max(code, NAGIOS_CRITICAL);
 
 }
@@ -363,6 +394,59 @@ void check_smart_log(int fd, int& code, int& logs) {
 
 }
 
+/**
+ * Function: parse_thresholds
+ * --------------------------
+ * Parses an input string and returns a map of attribute IDs to raw value thresholds
+ * thresholds: map of attribute IDs to threshold values
+ * in: input string in the form "k1:v1,k2:v2,..."
+ */
+bool parse_thresholds(SmartThresholdMap& thresholds, const string in) {
+
+  istringstream in_stream(in);
+  vector<string> tokens;
+  string token1, token2;
+
+  // Split the input into key value pairs
+  vector<string> key_value_pairs;
+  while(getline(in_stream, token1, ',')) {
+    tokens.push_back(token1);
+  }
+
+  // Split each key value pair
+  for(vector<string>::iterator i = tokens.begin(); i != tokens.end(); i++) {
+
+    istringstream tok_stream(*i);
+
+    // Read the first token delimited by =
+    getline(tok_stream, token1, ':');
+    if(!tok_stream.good()) {
+      return false;
+    }
+
+    // Read the second token, which shoud result in EOF
+    getline(tok_stream, token2);
+    if(!tok_stream.eof()) {
+      return false;
+    }
+
+    // Parse the tokens and ensure they are integers
+    char* p1;
+    char* p2;
+
+    unsigned long k = strtol(token1.c_str(), &p1, 10);
+    unsigned long v = strtol(token2.c_str(), &p2, 10);
+
+    if(*p1 || *p2) {
+      return false;
+    }
+
+    thresholds[k] = v;
+
+  }
+
+  return true;
+}
 
 /*
  * Function: main
@@ -373,25 +457,35 @@ void check_smart_log(int fd, int& code, int& logs) {
 int main(int argc, char** argv) {
 
   const char* device = 0;
+  const char* warning = "";
+  const char* critical = "";
 
   static struct option long_options[] = {
-    { "help",    no_argument,       0, 'h' },
-    { "version", no_argument,       0, 'v' },
-    { "device",  required_argument, 0, 'd' },
-    { 0,         0,                 0, 0   }
+    { "help",     no_argument,       0, 'h' },
+    { "version",  no_argument,       0, 'V' },
+    { "device",   required_argument, 0, 'd' },
+    { "warning",  required_argument, 0, 'w' },
+    { "critical", required_argument, 0, 'c' },
+    { 0,          0,                 0, 0   }
   };
 
   int c;
-  while((c = getopt_long(argc, argv, "hvd:", long_options, 0)) != -1) {
+  while((c = getopt_long(argc, argv, "hVd:w:c:", long_options, 0)) != -1) {
     switch(c) {
       case 'h':
         help();
         exit(0);
-      case 'v':
+      case 'V':
         version();
         exit(0);
       case 'd':
         device = optarg;
+        break;
+      case 'w':
+        warning = optarg;
+        break;
+      case 'c':
+        critical = optarg;
         break;
       default:
         usage();
@@ -400,11 +494,26 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Check for required arguments
   if(!device) {
     help();
-    exit(1);
+    exit(NAGIOS_UNKNOWN);
   }
 
+  // Parse optional arguments
+  SmartThresholdMap warning_thresholds;
+  if(!parse_thresholds(warning_thresholds, warning)) {
+    help();
+    exit(NAGIOS_UNKNOWN);
+  }
+
+  SmartThresholdMap critical_thresholds;
+  if(!parse_thresholds(critical_thresholds, critical)) {
+    help();
+    exit(NAGIOS_UNKNOWN);
+  }
+
+  // Check the device is compatible with the check
   int fd = open(device, O_RDWR);
   if(fd == -1) {
     cerr << "UNKNOWN: unable to open device " << device << endl;
@@ -432,19 +541,27 @@ int main(int argc, char** argv) {
   }
 
   int code = NAGIOS_OK;
+  int prdfail = 0;
+  int advisory = 0;
   int crit = 0;
   int warn = 0;
   int logs = 0;
   stringstream perfdata;
 
   // Perform the checks
-  check_smart_attributes(fd, code, crit, warn, perfdata);
+  check_smart_attributes(fd, critical_thresholds, warning_thresholds, code, prdfail, advisory, crit, warn, perfdata);
   check_smart_log(fd, code, logs);
 
   // Print out the results and performance data
   const char* status[] = { "OK", "WARNING", "CRITICAL" };
-  cout << status[code] << ": predicted fails " << crit << ", advisories " << warn
-       << ", errors " << logs << " |" << perfdata.str() << endl;
+  cout << status[code]
+       << ": prdfail " << prdfail
+       << ", advisory " << advisory
+       << ", critical " << crit
+       << ", warning " << warn
+       << ", logs " << logs
+       << " |" << perfdata.str()
+       << endl;
 
   close(fd);
 

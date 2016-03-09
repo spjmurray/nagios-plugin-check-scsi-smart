@@ -200,12 +200,30 @@ public:
   SmartAttribute(const smart_attribute& attribute);
 
   /**
+   * Function SmartAttribute::getID()
+   * --------------------------------
+   * Returns the SMART attribute ID
+   */
+  inline uint8_t getID() const {
+    return id;
+  }
+
+  /**
    * Function SmartAttribute::getPreFail()
    * -------------------------------------
    * Return whether this attribute predicts failure within 24h
    */
   inline bool getPreFail() const {
     return pre_fail;
+  }
+
+  /**
+   * Function: SmartAttribute:getRaw()
+   * ---------------------------------
+   * Return the sanitised raw value
+   */
+  inline uint64_t getRaw() const {
+    return raw;
   }
 
   /**
