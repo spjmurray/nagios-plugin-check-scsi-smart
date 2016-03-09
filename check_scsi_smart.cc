@@ -347,7 +347,13 @@ void check_smart_log(int fd, int& code, int& logs) {
 
   // Check for any logged errors
   for(int i=0; i<smart_log_sectors; i++) {
+
+    // If the index is zero there are no entries
+    if(!summaries[i].index)
+      continue;
+
     logs += summaries[i].count;
+
   }
 
   if(logs)
