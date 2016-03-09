@@ -49,7 +49,7 @@
 using namespace std;
 
 const char* const BINARY  = "check_scsi_smart";
-const char* const VERSION = "1.1.0";
+const char* const VERSION = "1.1.1";
 
 /* Nagios return codes */
 const int NAGIOS_OK       = 0;
