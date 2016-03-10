@@ -1,3 +1,9 @@
+nagios-plugin-check-scsi-smart (1.2.1) UNRELEASED; urgency=medium
+
+  * Version 1.2.1
+
+ -- Simon Murray <spjmurray@yahoo.co.uk>  Thu, 10 Mar 2016 09:57:00 +0000
+
 nagios-plugin-check-scsi-smart (1.2.0) UNRELEASED; urgency=medium
 
   * Version 1.2.0
