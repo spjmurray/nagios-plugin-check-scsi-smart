@@ -371,6 +371,9 @@ void check_smart_log(int fd, int& code, int& logs) {
 
   // Calculate the number of SMART log sectors to read and allocate a buffer
   uint16_t smart_log_sectors = log_directory.data_blocks[ATA_LOG_ADDRESS_SMART];
+  if(!smart_log_sectors)
+    return;
+
   smart_log_summary* summaries = new smart_log_summary[smart_log_sectors];
 
   // Read the logs in
