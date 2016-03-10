@@ -43,6 +43,7 @@
 #include "smart.h"
 
 #include <iostream>
+#include <iomanip>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -146,6 +147,23 @@ void sgio(int fd, unsigned char* cmdp, int cmd_len, unsigned char* dxferp, int d
 
   if(ioctl(fd, SG_IO, &sgio_hdr) < 0) {
     cerr << "UNKNOWN: SG_IO ioctl error" << endl;
+    exit(NAGIOS_UNKNOWN);
+  }
+
+  if(sgio_hdr.status) {
+    cerr << "UNKNOWN: SCSI command failed" << endl;
+    cerr << "CDB =";
+    for(int i=0; i<cmd_len; i++) {
+      cerr << " " << hex << setw(2) << setfill('0') << (unsigned int)cmdp[i];
+    }
+    cerr << endl;
+    if(sgio_hdr.sb_len_wr) {
+      cerr << "SENSE =";
+      for(int i=0; i<sgio_hdr.sb_len_wr; i++) {
+        cerr << " " << hex << setw(2) << setfill('0') << (unsigned int)sense[i];
+      }
+      cerr << endl;
+    }
     exit(NAGIOS_UNKNOWN);
   }
 
