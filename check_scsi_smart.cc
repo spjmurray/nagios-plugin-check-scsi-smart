@@ -130,7 +130,7 @@ void help() {
  * dxferp: Pointer to the SCSI data buffer
  * dxfer_len: Length of the SCSI data buffer
  */
-void sgio(int fd, unsigned char* cmdp, int cmd_len, unsigned char* dxferp, int dxfer_len) {
+bool sgio(int fd, unsigned char* cmdp, int cmd_len, unsigned char* dxferp, int dxfer_len) {
 
   sg_io_hdr_t sgio_hdr;
   unsigned char sense[32];
@@ -150,22 +150,7 @@ void sgio(int fd, unsigned char* cmdp, int cmd_len, unsigned char* dxferp, int d
     exit(NAGIOS_UNKNOWN);
   }
 
-  if(sgio_hdr.status) {
-    cerr << "UNKNOWN: SCSI command failed" << endl;
-    cerr << "CDB =";
-    for(int i=0; i<cmd_len; i++) {
-      cerr << " " << hex << setw(2) << setfill('0') << (unsigned int)cmdp[i];
-    }
-    cerr << endl;
-    if(sgio_hdr.sb_len_wr) {
-      cerr << "SENSE =";
-      for(int i=0; i<sgio_hdr.sb_len_wr; i++) {
-        cerr << " " << hex << setw(2) << setfill('0') << (unsigned int)sense[i];
-      }
-      cerr << endl;
-    }
-    exit(NAGIOS_UNKNOWN);
-  }
+  return !sgio_hdr.status;
 
 }
 
@@ -177,7 +162,7 @@ void sgio(int fd, unsigned char* cmdp, int cmd_len, unsigned char* dxferp, int d
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
  * buf: Data buffer to receive the data into, must be at least SECTOR
  */
-void ata_identify(int fd, unsigned char* buf) {
+bool ata_identify(int fd, unsigned char* buf) {
 
   sbc_ata_pass_through ata_pass_through;
   memset(reinterpret_cast<unsigned char*>(&ata_pass_through), 0, sizeof(sbc_ata_pass_through));
@@ -191,7 +176,7 @@ void ata_identify(int fd, unsigned char* buf) {
   ata_pass_through.count_7_0      = 1;
   ata_pass_through.command        = ATA_IDENTIFY_DEVICE;
 
-  sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, SECTOR_SIZE);
+  return sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, SECTOR_SIZE);
 
 }
 
@@ -203,7 +188,7 @@ void ata_identify(int fd, unsigned char* buf) {
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
  * buf: Data buffer to receive the data into, must be at least SECTOR
  */
-void ata_smart_read_data(int fd, unsigned char* buf) {
+bool ata_smart_read_data(int fd, unsigned char* buf) {
 
   sbc_ata_pass_through ata_pass_through;
   memset(reinterpret_cast<unsigned char*>(&ata_pass_through), 0, sizeof(sbc_ata_pass_through));
@@ -220,7 +205,7 @@ void ata_smart_read_data(int fd, unsigned char* buf) {
   ata_pass_through.lba_23_16      = 0xc2;
   ata_pass_through.lba_15_8       = 0x4f;
 
-  sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, SECTOR_SIZE);
+  return sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, SECTOR_SIZE);
 
 }
 
@@ -232,7 +217,7 @@ void ata_smart_read_data(int fd, unsigned char* buf) {
  * fd: File descriptor pointing at a SCSI or SCSI generic device node
  * buf: Data buffer to receive the data into, must be at least SECTOR
  */
-void ata_smart_read_thresholds(int fd, unsigned char* buf) {
+bool ata_smart_read_thresholds(int fd, unsigned char* buf) {
 
   sbc_ata_pass_through ata_pass_through;
   memset(reinterpret_cast<unsigned char*>(&ata_pass_through), 0, sizeof(sbc_ata_pass_through));
@@ -249,7 +234,7 @@ void ata_smart_read_thresholds(int fd, unsigned char* buf) {
   ata_pass_through.lba_23_16      = 0xc2;
   ata_pass_through.lba_15_8       = 0x4f;
 
-  sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, SECTOR_SIZE);
+  return sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, SECTOR_SIZE);
 
 }
 
@@ -262,7 +247,7 @@ void ata_smart_read_thresholds(int fd, unsigned char* buf) {
  *      bytes.
  * log: Log to read See A.1 for ATA8-ACS
  */
-void ata_smart_read_log(int fd, unsigned char* buf, int log, uint16_t sectors) {
+bool ata_smart_read_log(int fd, unsigned char* buf, int log, uint16_t sectors) {
 
   sbc_ata_pass_through ata_pass_through;
   memset(reinterpret_cast<unsigned char*>(&ata_pass_through), 0, sizeof(sbc_ata_pass_through));
@@ -281,7 +266,7 @@ void ata_smart_read_log(int fd, unsigned char* buf, int log, uint16_t sectors) {
   ata_pass_through.lba_15_8       = 0x4f;
   ata_pass_through.lba_7_0        = log;
 
-  sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, sectors * SECTOR_SIZE);
+  return sgio(fd, reinterpret_cast<unsigned char*>(&ata_pass_through), sizeof(ata_pass_through), buf, sectors * SECTOR_SIZE);
 
 }
 
@@ -292,9 +277,9 @@ void ata_smart_read_log(int fd, unsigned char* buf, int log, uint16_t sectors) {
  * fd: File descriptor pointing at a SCSI or SCSI generic device nod
  * buf: Data buffer to receive the data into, must be at least SECTOR
  */
-void ata_smart_read_log_directory(int fd, unsigned char* buf) {
+bool ata_smart_read_log_directory(int fd, unsigned char* buf) {
 
-  ata_smart_read_log(fd, buf, ATA_LOG_ADDRESS_DIRECTORY, 1);
+  return ata_smart_read_log(fd, buf, ATA_LOG_ADDRESS_DIRECTORY, 1);
 
 }
 
@@ -549,7 +534,10 @@ int main(int argc, char** argv) {
 
   // Check the device can use SMART and that it is enabled
   uint16_t identify[SECTOR_SIZE / 2];
-  ata_identify(fd, reinterpret_cast<unsigned char*>(identify));
+  if(!ata_identify(fd, reinterpret_cast<unsigned char*>(identify))) {
+    cout << "OK: ATA command set unsupported" << endl;
+    exit(NAGIOS_OK);
+  }
 
   if(~identify[82] & 0x01) {
     cout << "OK: SMART feature set unsupported" << endl;
