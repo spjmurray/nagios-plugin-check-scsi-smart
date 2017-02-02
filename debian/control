@@ -6,7 +6,7 @@ Standards-Version: 3.9.6
 Build-Depends: debhelper (>=9)
 
 Package: nagios-plugin-check-scsi-smart
-Architecture: amd64
+Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Nagios SMART disk check over SCSI
  Tunnels ATA SMART commands over SCSI transports.  This allows ATA SMART checks
