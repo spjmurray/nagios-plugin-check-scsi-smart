@@ -54,7 +54,7 @@
 using namespace std;
 
 const char* const BINARY  = "check_scsi_smart";
-const char* const VERSION = "1.2.2";
+const char* const VERSION = "1.2.3";
 
 // Nagios return codes
 const int NAGIOS_OK       = 0;
