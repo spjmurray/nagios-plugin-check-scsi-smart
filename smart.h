@@ -135,8 +135,13 @@ typedef struct {
 typedef struct __attribute__((packed)) {
   uint8_t command;
   uint8_t feature;
-  uint32_t lba: 24;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+   uint32_t lba: 24;
+   uint32_t count: 8;
+#else
   uint32_t count: 8;
+  uint32_t lba: 24;
+#endif
   uint8_t device;
   uint8_t init;
   uint32_t timestamp;
@@ -150,8 +155,13 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
   uint8_t reserved;
   uint8_t error;
-  uint32_t lba: 24;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+   uint32_t lba: 24;
+   uint32_t count: 8;
+#else
   uint32_t count: 8;
+  uint32_t lba: 24;
+#endif
   uint8_t device;
   uint8_t status;
   uint8_t extended[19];
@@ -287,9 +297,7 @@ public:
    * Class constructor to create a SmartThreshold object from raw data
    * threshold: Reference to a smart_threshold object
    */
-  SmartThreshold(const smart_threshold& threshold)
-  : threshold(threshold.threshold)
-  {}
+  SmartThreshold(const smart_threshold& threshold);
 
   /**
    * Function: SmartThreshold::getThreshold()

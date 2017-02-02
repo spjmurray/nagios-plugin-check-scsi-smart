@@ -20,6 +20,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include "endian.h"
 #include "smart.h"
 
 /**
@@ -29,11 +30,12 @@
  * attribute: Reference to a smart_attribute structure
  */
 SmartAttribute::SmartAttribute(const smart_attribute& attribute)
-: id(attribute.id),
-  pre_fail(attribute.flags & 0x1),
-  offline(attribute.flags & 0x2),
-  value(attribute.value),
-  raw((static_cast<uint64_t>(attribute.raw_hi) << 32) | static_cast<uint64_t>(attribute.raw_lo)) {
+: id(StorageEndian::swap(attribute.id)),
+  pre_fail(StorageEndian::swap(attribute.flags) & 0x1),
+  offline(StorageEndian::swap(attribute.flags) & 0x2),
+  value(StorageEndian::swap(attribute.value)),
+  raw((static_cast<uint64_t>(StorageEndian::swap(attribute.raw_hi)) << 32) |
+       static_cast<uint64_t>(StorageEndian::swap(attribute.raw_lo))) {
 
   // Logic shamelessly lifted from smartmontools
   switch(id) {
@@ -357,3 +359,13 @@ ostream& operator<<(ostream& o, const SmartAttribute& attribute) {
   return o;
 
 }
+
+/**
+ * Function: SmartThreshold::SmartThreshold(const smart_threshold&)
+ * ----------------------------------------------------------------
+ * Class constructor to create a SmartThreshold object from raw data
+ * threshold: Reference to a smart_threshold object
+ */
+SmartThreshold::SmartThreshold(const smart_threshold& threshold)
+: threshold(StorageEndian::swap(threshold.threshold))
+{}

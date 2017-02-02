@@ -2,7 +2,7 @@ CXX=g++
 CXXFLAGS=-O2 -Wall
 LDFLAGS=-O2 -Wall
 EXE=check_scsi_smart
-SOURCE=check_scsi_smart.cc smart.cc
+SOURCE=$(wildcard *.cc)
 OBJECT=$(patsubst %.cc,%.o,$(SOURCE))
 PREFIX=/usr
 LIBDIR=lib
@@ -22,4 +22,7 @@ install:
 
 .PHONY: clean
 clean:
+	rm -f *.o
 	rm -f $(EXE)
+
+# vi: noet:

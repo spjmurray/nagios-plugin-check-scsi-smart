@@ -41,6 +41,7 @@
 #include "scsi.h"
 #include "ata.h"
 #include "smart.h"
+#include "endian.h"
 
 #include <iostream>
 #include <iomanip>
@@ -373,7 +374,7 @@ void check_smart_log(int fd, int& code, int& logs) {
   ata_smart_read_log_directory(fd, reinterpret_cast<unsigned char*>(&log_directory));
 
   // Calculate the number of SMART log sectors to read and allocate a buffer
-  uint16_t smart_log_sectors = log_directory.data_blocks[ATA_LOG_ADDRESS_SMART];
+  uint16_t smart_log_sectors = StorageEndian::swap(log_directory.data_blocks[ATA_LOG_ADDRESS_SMART]);
   if(!smart_log_sectors)
     return;
 
@@ -386,10 +387,10 @@ void check_smart_log(int fd, int& code, int& logs) {
   for(int i=0; i<smart_log_sectors; i++) {
 
     // If the index is zero there are no entries
-    if(!summaries[i].index)
+    if(!StorageEndian::swap(summaries[i].index))
       continue;
 
-    logs += summaries[i].count;
+    logs += StorageEndian::swap(summaries[i].count);
 
   }
 
@@ -539,12 +540,12 @@ int main(int argc, char** argv) {
     exit(NAGIOS_OK);
   }
 
-  if(~identify[82] & 0x01) {
+  if(~StorageEndian::swap(identify[82]) & 0x01) {
     cout << "OK: SMART feature set unsupported" << endl;
     exit(NAGIOS_OK);
   }
 
-  if(~identify[85] & 0x01) {
+  if(~StorageEndian::swap(identify[85]) & 0x01) {
     cout << "UNKNOWN: SMART feature set disabled" << endl;
     exit(NAGIOS_UNKNOWN);
   }

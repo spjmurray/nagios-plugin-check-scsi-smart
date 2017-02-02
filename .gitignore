@@ -1,2 +1,3 @@
 check_scsi_smart
+debian/nagios-plugin-check-scsi-smart
 *.o

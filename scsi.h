@@ -38,15 +38,30 @@
  */
 typedef struct {
   uint8_t operation_code;
-  uint8_t extend: 1;
-  uint8_t protocol: 4;
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+   uint8_t extend: 1;
+   uint8_t protocol: 4;
+   uint8_t multiple_count: 3;
+#else
   uint8_t multiple_count: 3;
-  uint8_t t_length: 2;
-  uint8_t byte_block: 1;
-  uint8_t t_dir: 1;
-  uint8_t t_type: 1;
-  uint8_t ck_cond: 1;
+  uint8_t protocol: 4;
+  uint8_t extend: 1;
+#endif
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+   uint8_t t_length: 2;
+   uint8_t byte_block: 1;
+   uint8_t t_dir: 1;
+   uint8_t t_type: 1;
+   uint8_t ck_cond: 1;
+   uint8_t off_line: 2;
+#else
   uint8_t off_line: 2;
+  uint8_t ck_cond: 1;
+  uint8_t t_type: 1;
+  uint8_t t_dir: 1;
+  uint8_t byte_block: 1;
+  uint8_t t_length: 2;
+#endif
   uint8_t features_15_8;
   uint8_t features_7_0;
   uint8_t count_15_8;
