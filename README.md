@@ -40,9 +40,9 @@ plugin and thresholds explicitly set for your particular device/environment.
     -d, --device=DEVICE
        Select device DEVICE
     -w, --warning=ID:THRESHOLD[,ID:THRESHOLD]
-       Specify warning thresholds as a list of integer attributes to interger thresholds
+       Specify warning thresholds as a list of integer attributes to integer thresholds
     -c, --critical=ID:THRESHOLD[,ID:THRESHOLD]
-       Specify critical thresholds as a list of integer attributes to interger thresholds
+       Specify critical thresholds as a list of integer attributes to integer thresholds
 
 ### Output
 

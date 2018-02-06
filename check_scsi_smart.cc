@@ -113,9 +113,9 @@ void help() {
        << "-d, --device=DEVICE" << endl
        << "   Select device DEVICE" << endl
        << "-w, --warning=ID:THRESHOLD[,ID:THRESHOLD]" << endl
-       << "   Specify warning thresholds as a list of integer attributes to interger thresholds" << endl
+       << "   Specify warning thresholds as a list of integer attributes to integer thresholds" << endl
        << "-c, --critical=ID:THRESHOLD[,ID:THRESHOLD]" << endl
-       << "   Specify critical thresholds as a list of integer attributes to interger thresholds" << endl
+       << "   Specify critical thresholds as a list of integer attributes to integer thresholds" << endl
        << endl;
 
 }
