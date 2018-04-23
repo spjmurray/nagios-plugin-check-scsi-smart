@@ -367,7 +367,8 @@ void check_smart_attributes(int fd, SmartThresholdMap& critical_thresholds, Smar
  * code: Reference to the current return code
  * logs: Reference to a count of the number of SMART logs
  */
-void check_smart_log(int fd, int& code, int& logs) {
+void check_smart_log(int fd, SmartThresholdMap& critical_thresholds, SmartThresholdMap& warning_thresholds,
+                     int& code, int& logs) {
 
   // Read the SMART log directory
   smart_log_directory log_directory;
@@ -394,11 +395,21 @@ void check_smart_log(int fd, int& code, int& logs) {
 
   }
 
-  if(logs)
+  // Check against custom raw thresholds
+  uint64_t crit_threshold = critical_thresholds[0];
+  uint64_t warn_threshold = warning_thresholds[0];
+
+  if (crit_threshold && ((uint64_t)logs >= crit_threshold)) {
+    code = max(code, NAGIOS_CRITICAL);
+  } else if (warn_threshold) {
+    if ((uint64_t)logs >= warn_threshold) {
+      code = max(code, NAGIOS_WARNING);
+    }
+  } else if(logs) {
     code = max(code, NAGIOS_WARNING);
+  }
 
   delete [] summaries;
-
 }
 
 /**
@@ -560,7 +571,7 @@ int main(int argc, char** argv) {
 
   // Perform the checks
   check_smart_attributes(fd, critical_thresholds, warning_thresholds, code, prdfail, advisory, crit, warn, perfdata);
-  check_smart_log(fd, code, logs);
+  check_smart_log(fd, critical_thresholds, warning_thresholds, code, logs);
 
   // Print out the results and performance data
   const char* status[] = { "OK", "WARNING", "CRITICAL" };
